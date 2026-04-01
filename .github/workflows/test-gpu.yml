@@ -1,0 +1,31 @@
+name: Test (GPU)
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  test-gpu:
+    runs-on: ubuntu-latest
+    # GPU runners require self-hosted or a paid tier with GPU support.
+    # This workflow is a placeholder — update the runner label when GPU is available.
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Create virtual environment and install (GPU)
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -e ".[test,gpu]"
+
+      - name: Run tests on GPU
+        run: |
+          .venv/bin/python -m pytest tests/ -v --tb=short

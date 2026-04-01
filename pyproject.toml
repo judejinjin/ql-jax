@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ql-jax"
+version = "0.1.0"
+description = "QuantLib re-implemented in JAX"
+requires-python = ">=3.10"
+license = {text = "BSD-3-Clause"}
+dependencies = [
+    "jax>=0.4.20",
+    "jaxlib>=0.4.20",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-benchmark",
+    "pytest-xdist",
+    "sphinx",
+    "black",
+    "ruff",
+    "mypy",
+    "pre-commit",
+]
+test = [
+    "pytest>=7.0",
+    "pytest-xdist",
+    "pytest-benchmark",
+]
+gpu = [
+    "jax[cuda12]",
+]
+
+[tool.setuptools.packages.find]
+include = ["ql_jax*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
