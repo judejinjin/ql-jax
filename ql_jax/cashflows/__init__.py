@@ -6,9 +6,12 @@ from ql_jax.cashflows.fixed_rate import (
 from ql_jax.cashflows.analytics import (
     npv, bps, yield_rate, duration, convexity, accrued_amount,
 )
+from ql_jax.cashflows.indexed import IndexedCashFlow
+from ql_jax.cashflows.time_basket import TimeBasket
 
 __all__ = [
     "SimpleCashFlow", "Redemption",
     "Coupon", "FixedRateCoupon", "fixed_rate_leg",
     "npv", "bps", "yield_rate", "duration", "convexity", "accrued_amount",
+    "IndexedCashFlow", "TimeBasket",
 ]
