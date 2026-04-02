@@ -30,12 +30,40 @@ class DayCountConvention:
     Simple = "Simple"
 
 
+# Shorthand aliases for convenience
+_CONVENTION_ALIASES = {
+    "Actual360": DayCountConvention.Actual360,
+    "Actual365Fixed": DayCountConvention.Actual365Fixed,
+    "Actual365": DayCountConvention.Actual365Fixed,
+    "Actual365NoLeap": DayCountConvention.Actual365NoLeap,
+    "Actual364": DayCountConvention.Actual364,
+    "ActualActualISDA": DayCountConvention.ActualActualISDA,
+    "ActualActual": DayCountConvention.ActualActualISDA,
+    "ActualActualAFB": DayCountConvention.ActualActualAFB,
+    "Thirty360": DayCountConvention.Thirty360BondBasis,
+    "Thirty360BondBasis": DayCountConvention.Thirty360BondBasis,
+    "Thirty360Eurobond": DayCountConvention.Thirty360EurobondBasis,
+    "Thirty360ISDA": DayCountConvention.Thirty360ISDA,
+    "Thirty360NASD": DayCountConvention.Thirty360NASD,
+    "Thirty365": DayCountConvention.Thirty365,
+    "Business252": DayCountConvention.Business252,
+    "One": DayCountConvention.One,
+    "Simple": DayCountConvention.Simple,
+}
+
+
+def _resolve_convention(convention: str) -> str:
+    """Resolve a convention alias to its canonical form."""
+    return _CONVENTION_ALIASES.get(convention, convention)
+
+
 # ---------------------------------------------------------------------------
 # Day count computation
 # ---------------------------------------------------------------------------
 
 def day_count(d1: Date, d2: Date, convention: str = DayCountConvention.Actual360) -> int:
     """Return the day count between two dates under a given convention."""
+    convention = _resolve_convention(convention)
     if convention in (
         DayCountConvention.Actual360,
         DayCountConvention.Actual365Fixed,
@@ -73,6 +101,7 @@ def year_fraction(
 
     This is the primary bridge from integer date domain to float pricing domain.
     """
+    convention = _resolve_convention(convention)
     if d1 == d2:
         return 0.0
 
