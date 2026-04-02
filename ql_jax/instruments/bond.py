@@ -256,3 +256,119 @@ def make_amortizing_fixed_rate_bond(
         redemptions_=redemptions,
         notional_=face_amount,
     )
+
+
+# ---------------------------------------------------------------------------
+# Amortizing floating-rate bond
+# ---------------------------------------------------------------------------
+
+def make_amortizing_floating_rate_bond(
+    settlement_days: int,
+    calendar: Calendar,
+    face_amount: float,
+    start_date: Date,
+    tenor: Period,
+    frequency: int,
+    index,
+    day_counter: str = "Actual/360",
+    spread: float = 0.0,
+    payment_convention: int = BusinessDayConvention.Following,
+    fixing_days: int = 2,
+    issue_date: Date | None = None,
+) -> Bond:
+    """Create an amortizing floating-rate bond with level payments."""
+    from ql_jax.time.daycounter import year_fraction
+
+    sched = (MakeSchedule()
+             .from_date(start_date)
+             .to_date(start_date + tenor)
+             .with_frequency(frequency)
+             .with_calendar(calendar)
+             .with_convention(payment_convention)
+             .build())
+
+    n = len(sched) - 1
+    if n <= 0:
+        return Bond(settlement_days=settlement_days, calendar=calendar)
+
+    # Straight-line amortization for floating-rate
+    principal_per_period = face_amount / n
+    balance = face_amount
+
+    from ql_jax.cashflows.floating_rate import IborCoupon
+    coupons_list = []
+    redemptions = []
+    for i in range(n):
+        start = sched[i]
+        end = sched[i + 1]
+        pay_date = calendar.adjust(end, payment_convention)
+        coupons_list.append(IborCoupon(
+            payment_date=pay_date,
+            nominal=balance,
+            accrual_start=start,
+            accrual_end=end,
+            index=index,
+            fixing_days=fixing_days,
+            gearing=1.0,
+            spread=spread,
+            day_counter=day_counter,
+        ))
+        repay = min(principal_per_period, balance)
+        redemptions.append(Redemption(date=pay_date, amount=repay))
+        balance -= repay
+
+    return Bond(
+        settlement_days=settlement_days,
+        calendar=calendar,
+        issue_date=issue_date,
+        cashflows_=coupons_list,
+        redemptions_=redemptions,
+        notional_=face_amount,
+    )
+
+
+# ---------------------------------------------------------------------------
+# CPI bond (inflation-linked)
+# ---------------------------------------------------------------------------
+
+def make_cpi_bond(
+    settlement_days: int,
+    face_amount: float,
+    schedule: Schedule,
+    coupon_rate: float,
+    base_cpi: float,
+    day_counter: str = "Actual/365 (Fixed)",
+    payment_convention: int = BusinessDayConvention.Following,
+    redemption: float = 100.0,
+    issue_date: Date | None = None,
+    calendar: Calendar | None = None,
+) -> Bond:
+    """Create a CPI inflation-linked bond.
+
+    Coupons and redemption are adjusted by CPI ratio.
+    The bond stores the base_cpi and coupon_rate; actual CPI
+    adjustment is applied at pricing time.
+    """
+    cal = calendar or schedule.calendar
+    legs = fixed_rate_leg(
+        schedule, face_amount, coupon_rate, day_counter,
+        payment_calendar=cal,
+        payment_convention=payment_convention,
+    )
+    redemption_date = schedule[-1]
+    if cal is not None:
+        redemption_date = cal.adjust(redemption_date, payment_convention)
+    reds = [Redemption(date=redemption_date, amount=redemption)]
+
+    bond = Bond(
+        settlement_days=settlement_days,
+        calendar=cal,
+        issue_date=issue_date,
+        cashflows_=legs,
+        redemptions_=reds,
+        notional_=face_amount,
+    )
+    # Store CPI metadata on the bond for engines to use
+    bond.base_cpi = base_cpi  # type: ignore[attr-defined]
+    bond.is_inflation_linked = True  # type: ignore[attr-defined]
+    return bond

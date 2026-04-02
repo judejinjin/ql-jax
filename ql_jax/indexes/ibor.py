@@ -251,3 +251,87 @@ def CORRA() -> OvernightIndex:
         day_counter_convention="Actual365Fixed",
         calendar=WeekendsOnly(),
     )
+
+
+# ---------------------------------------------------------------------------
+# Additional IBOR / Overnight indexes (Phase 12)
+# ---------------------------------------------------------------------------
+
+def AUDLibor(tenor_months: int = 3) -> IborIndex:
+    return IborIndex(family_name="AUDLibor", tenor_months=tenor_months, fixing_days=2, currency_code="AUD", day_counter_convention="Actual360", calendar=WeekendsOnly())
+
+
+def BBSW(tenor_months: int = 3) -> IborIndex:
+    """Bank Bill Swap Rate (Australia)."""
+    return IborIndex(family_name="BBSW", tenor_months=tenor_months, fixing_days=0, currency_code="AUD", day_counter_convention="Actual365Fixed", calendar=WeekendsOnly())
+
+
+def CADLibor(tenor_months: int = 3) -> IborIndex:
+    return IborIndex(family_name="CADLibor", tenor_months=tenor_months, fixing_days=2, currency_code="CAD", day_counter_convention="Actual360", calendar=WeekendsOnly())
+
+
+def CDOR(tenor_months: int = 3) -> IborIndex:
+    """Canadian Dollar Offered Rate."""
+    return IborIndex(family_name="CDOR", tenor_months=tenor_months, fixing_days=0, currency_code="CAD", day_counter_convention="Actual365Fixed", calendar=WeekendsOnly())
+
+
+def CDI() -> OvernightIndex:
+    """Brazilian CDI rate."""
+    return OvernightIndex(family_name="CDI", tenor_months=0, fixing_days=0, currency_code="BRL", day_counter_convention="Business252", calendar=WeekendsOnly())
+
+
+def DESTR() -> OvernightIndex:
+    """Danish short-term rate."""
+    return OvernightIndex(family_name="DESTR", tenor_months=0, fixing_days=0, currency_code="DKK", day_counter_convention="Actual360", calendar=WeekendsOnly())
+
+
+def DKKLibor(tenor_months: int = 3) -> IborIndex:
+    return IborIndex(family_name="DKKLibor", tenor_months=tenor_months, fixing_days=2, currency_code="DKK", day_counter_convention="Actual360", calendar=WeekendsOnly())
+
+
+def Jibar(tenor_months: int = 3) -> IborIndex:
+    """Johannesburg Interbank Agreed Rate."""
+    return IborIndex(family_name="Jibar", tenor_months=tenor_months, fixing_days=0, currency_code="ZAR", day_counter_convention="Actual365Fixed", calendar=WeekendsOnly())
+
+
+def KOFR() -> OvernightIndex:
+    """Korean overnight financing rate."""
+    return OvernightIndex(family_name="KOFR", tenor_months=0, fixing_days=0, currency_code="KRW", day_counter_convention="Actual365Fixed", calendar=WeekendsOnly())
+
+
+def NZDLibor(tenor_months: int = 3) -> IborIndex:
+    return IborIndex(family_name="NZDLibor", tenor_months=tenor_months, fixing_days=2, currency_code="NZD", day_counter_convention="Actual360", calendar=WeekendsOnly())
+
+
+def NZOCR() -> OvernightIndex:
+    """New Zealand Official Cash Rate."""
+    return OvernightIndex(family_name="NZOCR", tenor_months=0, fixing_days=0, currency_code="NZD", day_counter_convention="Actual365Fixed", calendar=WeekendsOnly())
+
+
+def Pribor(tenor_months: int = 3) -> IborIndex:
+    """Prague Interbank Offered Rate."""
+    return IborIndex(family_name="Pribor", tenor_months=tenor_months, fixing_days=2, currency_code="CZK", day_counter_convention="Actual360", calendar=WeekendsOnly())
+
+
+def SEKLibor(tenor_months: int = 3) -> IborIndex:
+    return IborIndex(family_name="SEKLibor", tenor_months=tenor_months, fixing_days=2, currency_code="SEK", day_counter_convention="Actual360", calendar=WeekendsOnly())
+
+
+def Shibor(tenor_months: int = 3) -> IborIndex:
+    """Shanghai Interbank Offered Rate."""
+    return IborIndex(family_name="Shibor", tenor_months=tenor_months, fixing_days=0, currency_code="CNY", day_counter_convention="Actual360", calendar=WeekendsOnly())
+
+
+def SWESTR() -> OvernightIndex:
+    """Swedish short-term rate."""
+    return OvernightIndex(family_name="SWESTR", tenor_months=0, fixing_days=0, currency_code="SEK", day_counter_convention="Actual360", calendar=WeekendsOnly())
+
+
+def Tonar() -> OvernightIndex:
+    """Tokyo Overnight Average Rate (TONA alias)."""
+    return TONA()
+
+
+def Wibor(tenor_months: int = 3) -> IborIndex:
+    """Warsaw Interbank Offered Rate."""
+    return IborIndex(family_name="Wibor", tenor_months=tenor_months, fixing_days=2, currency_code="PLN", day_counter_convention="Actual365Fixed", calendar=WeekendsOnly())

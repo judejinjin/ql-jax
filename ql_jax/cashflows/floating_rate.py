@@ -15,6 +15,7 @@ class FloatingRateCoupon(Coupon):
     """Base floating-rate coupon with fixing, gearing, and spread."""
     index: object = None          # InterestRateIndex
     fixing_date: Date | None = None
+    fixing_days: int = 0          # business days before accrual start for fixing
     gearing: float = 1.0
     spread: float = 0.0
     day_counter: str = "Actual/360"

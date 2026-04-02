@@ -131,3 +131,148 @@ class FdmMesherComposite:
         """Return meshgrid arrays for all dimensions."""
         locs = [m.locations() for m in self.meshers]
         return jnp.meshgrid(*locs, indexing='ij')
+
+
+# ---------------------------------------------------------------------------
+# Black-Scholes mesher  (log-spot concentrating near strike)
+# ---------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class FdmBlackScholesMesher:
+    """Black-Scholes mesher concentrating around strike.
+
+    Parameters
+    ----------
+    size : number of grid points
+    strike : concentration point
+    spot : current spot price
+    r : risk-free rate
+    q : dividend yield
+    sigma : volatility
+    maturity : time to maturity
+    stdev_range : range in standard deviations
+    """
+    size: int
+    strike: float
+    spot: float
+    r: float = 0.05
+    q: float = 0.0
+    sigma: float = 0.2
+    maturity: float = 1.0
+    stdev_range: float = 4.0
+
+    def locations(self):
+        log_fwd = jnp.log(self.spot) + (self.r - self.q - 0.5 * self.sigma ** 2) * self.maturity
+        stdev = self.sigma * jnp.sqrt(self.maturity) * self.stdev_range
+        low = log_fwd - stdev
+        high = log_fwd + stdev
+        center = jnp.log(self.strike)
+        mesher = Concentrating1dMesher(low, high, self.size, center, density=5.0)
+        return mesher.locations()
+
+    def dminus(self):
+        return jnp.diff(self.locations())
+
+    def dplus(self):
+        return self.dminus()
+
+
+@dataclass(frozen=True)
+class FdmHestonVarianceMesher:
+    """Variance mesher for Heston model.
+
+    Parameters
+    ----------
+    size : grid points
+    v0 : initial variance
+    kappa : mean reversion
+    theta : long-run variance
+    sigma_v : vol of vol
+    maturity : time in years
+    """
+    size: int
+    v0: float
+    kappa: float
+    theta: float
+    sigma_v: float
+    maturity: float
+
+    def locations(self):
+        v_max = self.theta + 4.0 * self.sigma_v * jnp.sqrt(self.theta / (2.0 * self.kappa))
+        v_max = jnp.maximum(v_max, 2.0 * self.v0)
+        return Concentrating1dMesher(
+            1e-6, v_max, self.size, self.v0, density=3.0,
+        ).locations()
+
+    def dminus(self):
+        return jnp.diff(self.locations())
+
+    def dplus(self):
+        return self.dminus()
+
+
+# ---------------------------------------------------------------------------
+# Additional meshers
+# ---------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class Predefined1dMesher:
+    """User-supplied grid points.
+
+    Parameters
+    ----------
+    grid : array of sorted grid locations
+    """
+    grid: jnp.ndarray
+
+    @property
+    def size(self):
+        return self.grid.shape[0]
+
+    @property
+    def low(self):
+        return float(self.grid[0])
+
+    @property
+    def high(self):
+        return float(self.grid[-1])
+
+    def locations(self):
+        return self.grid
+
+    def dminus(self):
+        return jnp.diff(self.grid)
+
+    def dplus(self):
+        return self.dminus()
+
+
+@dataclass(frozen=True)
+class ExponentialJump1dMesher:
+    """Mesher for jump-diffusion: concentrates near log-spot with exponential tails.
+
+    Parameters
+    ----------
+    low, high : bounds
+    size : grid points
+    center : concentration center
+    beta : exponential decay parameter
+    """
+    low: float
+    high: float
+    size: int
+    center: float
+    beta: float = 1.0
+
+    def locations(self):
+        xi = jnp.linspace(0.0, 1.0, self.size)
+        # Map through double-exponential
+        c = (self.high - self.low) / 2.0
+        x = self.center + c * jnp.tanh(self.beta * (2.0 * xi - 1.0))
+        return x
+
+    def dminus(self):
+        return jnp.diff(self.locations())
+
+    def dplus(self):
+        return self.dminus()

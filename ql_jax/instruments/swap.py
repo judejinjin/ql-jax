@@ -204,3 +204,113 @@ def make_ois(
         payment_convention=payment_convention,
         averaging=averaging,
     )
+
+
+# ---------------------------------------------------------------------------
+# Zero-coupon swap
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ZeroCouponSwap:
+    """Zero-coupon swap — exchanges a single fixed payment for a floating leg.
+
+    Parameters
+    ----------
+    type_ : SwapType.Payer or SwapType.Receiver
+    nominal : notional amount
+    start_date : start date
+    maturity_date : maturity date
+    fixed_rate : annualized fixed rate
+    float_schedule : Schedule for floating leg
+    ibor_index : floating rate index
+    day_counter : day count convention
+    spread : floating spread
+    """
+    type_: int = SwapType.Payer
+    nominal: float = 1_000_000.0
+    start_date: Date | None = None
+    maturity_date_: Date | None = None
+    fixed_rate: float = 0.0
+    float_schedule: Schedule | None = None
+    ibor_index: Any = None
+    day_counter: str = "Actual/365 (Fixed)"
+    spread: float = 0.0
+    payment_convention: int = BusinessDayConvention.Following
+    floating_leg: list = field(default_factory=list)
+
+    def __post_init__(self):
+        if (self.float_schedule is not None
+                and self.ibor_index is not None
+                and not self.floating_leg):
+            self.floating_leg = ibor_leg(
+                self.float_schedule,
+                self.ibor_index,
+                self.nominal,
+                self.day_counter,
+                spread=self.spread,
+                payment_convention=self.payment_convention,
+            )
+
+    @property
+    def maturity_date(self) -> Date | None:
+        return self.maturity_date_
+
+
+# ---------------------------------------------------------------------------
+# Multiple-resets swap  (sub-periods per coupon)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class MultipleResetsSwap:
+    """Swap with multiple index resets per coupon period.
+
+    Each floating coupon accumulates sub-period fixings
+    (compounded or averaged).
+
+    Parameters
+    ----------
+    type_ : SwapType.Payer or SwapType.Receiver
+    nominal : notional
+    fixed_schedule : Schedule for fixed leg
+    fixed_rate : fixed rate
+    fixed_day_counter : day count for fixed leg
+    float_schedule : Schedule for floating leg / outer periods
+    ibor_index : IBOR index for sub-period fixings
+    float_day_counter : day count for float leg
+    spread : floating spread
+    resets_per_period : number of index fixings per coupon period
+    averaging : True = simple avg, False = compound
+    """
+    type_: int = SwapType.Payer
+    nominal: float = 1_000_000.0
+    fixed_schedule: Schedule | None = None
+    fixed_rate: float = 0.0
+    fixed_day_counter: str = "Actual/365 (Fixed)"
+    float_schedule: Schedule | None = None
+    ibor_index: Any = None
+    float_day_counter: str = "Actual/360"
+    spread: float = 0.0
+    resets_per_period: int = 3
+    averaging: bool = False
+    payment_convention: int = BusinessDayConvention.Following
+    fixed_leg: list = field(default_factory=list)
+    floating_leg: list = field(default_factory=list)
+
+    def __post_init__(self):
+        if self.fixed_schedule is not None and not self.fixed_leg:
+            self.fixed_leg = fixed_rate_leg(
+                self.fixed_schedule,
+                self.nominal,
+                self.fixed_rate,
+                self.fixed_day_counter,
+                payment_convention=self.payment_convention,
+            )
+
+    @property
+    def maturity_date(self) -> Date | None:
+        dates = []
+        if self.fixed_schedule and len(self.fixed_schedule) > 0:
+            dates.append(self.fixed_schedule[-1])
+        if self.float_schedule and len(self.float_schedule) > 0:
+            dates.append(self.float_schedule[-1])
+        return max(dates) if dates else None
