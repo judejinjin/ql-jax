@@ -1,0 +1,29 @@
+name: Lint
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install linters
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+
+      - name: Run ruff check
+        run: ruff check ql_jax/ tests/ --select E,F,W --ignore E501
+
+      - name: Run ruff format check
+        run: ruff format --check ql_jax/ tests/ || echo "Format issues found (non-blocking)"

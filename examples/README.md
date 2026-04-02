@@ -1,8 +1,19 @@
-# Examples
+# QL-JAX Examples
 
-QL-JAX example programs. Each QuantLib example will have two versions:
+Runnable examples demonstrating QL-JAX capabilities.
 
-1. `XX_classic.py` — faithful port matching C++ output
-2. `XX_jax_enhanced.py` — demonstrates AD, vmap, and GPU capabilities
+| Example | Description |
+|---------|-------------|
+| `equity_option.py` | European option pricing with BSM, Heston, binomial, FD; AD Greeks; vmap batch pricing |
+| `bonds.py` | Fixed-rate bond pricing with flat yield curve; DV01 via AD |
+| `cds.py` | CDS pricing with midpoint engine; fair spread; AD hazard rate sensitivity |
 
-See `IMPLEMENTATION_PLAN.md` Phase 8 for the full list of 20 examples.
+## Running
+
+```bash
+cd ql-jax
+source .venv/bin/activate
+python examples/equity_option.py
+python examples/bonds.py
+python examples/cds.py
+```
