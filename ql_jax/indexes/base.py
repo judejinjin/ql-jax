@@ -56,16 +56,18 @@ class InterestRateIndex:
 
     def fixing_date(self, value_date: Date) -> Date:
         """Get the fixing date for a given value date."""
+        from ql_jax._util.types import TimeUnit, BusinessDayConvention
         d = value_date
         for _ in range(self.fixing_days):
-            d = self.calendar.advance_by_days(d, -1)
+            d = self.calendar.advance(d, -1, TimeUnit.Days, BusinessDayConvention.Preceding)
         return d
 
     def value_date(self, fixing_date: Date) -> Date:
         """Get the value date for a given fixing date."""
+        from ql_jax._util.types import TimeUnit, BusinessDayConvention
         d = fixing_date
         for _ in range(self.fixing_days):
-            d = self.calendar.advance_by_days(d, 1)
+            d = self.calendar.advance(d, 1, TimeUnit.Days, BusinessDayConvention.Following)
         return d
 
     def maturity_date(self, value_date: Date) -> Date:
