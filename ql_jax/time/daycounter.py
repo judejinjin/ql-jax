@@ -25,6 +25,8 @@ class DayCountConvention:
     Thirty360ISDA = "30/360 (ISDA)"
     Thirty360NASD = "30/360 (NASD)"
     Thirty365 = "30/365"
+    Actual36525 = "Actual/365.25"
+    Actual366 = "Actual/366"
     Business252 = "Business/252"
     One = "1/1"
     Simple = "Simple"
@@ -46,6 +48,9 @@ _CONVENTION_ALIASES = {
     "Thirty360ISDA": DayCountConvention.Thirty360ISDA,
     "Thirty360NASD": DayCountConvention.Thirty360NASD,
     "Thirty365": DayCountConvention.Thirty365,
+    "Actual36525": DayCountConvention.Actual36525,
+    "Actual365.25": DayCountConvention.Actual36525,
+    "Actual366": DayCountConvention.Actual366,
     "Business252": DayCountConvention.Business252,
     "One": DayCountConvention.One,
     "Simple": DayCountConvention.Simple,
@@ -116,6 +121,12 @@ def year_fraction(
 
     if convention == DayCountConvention.Actual364:
         return (d2.serial - d1.serial) / 364.0
+
+    if convention == DayCountConvention.Actual36525:
+        return (d2.serial - d1.serial) / 365.25
+
+    if convention == DayCountConvention.Actual366:
+        return (d2.serial - d1.serial) / 366.0
 
     if convention == DayCountConvention.ActualActualISDA:
         return _actual_actual_isda_yf(d1, d2)

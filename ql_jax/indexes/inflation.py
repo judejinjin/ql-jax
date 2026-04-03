@@ -111,3 +111,19 @@ def AUCPI():
         family_name="CPI", region="AU", revised=False,
         frequency='Monthly', observation_lag=2,
     )
+
+
+def ZACPI():
+    """South Africa CPI."""
+    return ZeroInflationIndex(
+        family_name="CPI", region="ZA", revised=False,
+        frequency='Monthly', observation_lag=3,
+    )
+
+
+def UKHICP():
+    """UK Harmonised Index of Consumer Prices."""
+    return ZeroInflationIndex(
+        family_name="HICP", region="UK", revised=True,
+        frequency='Monthly', observation_lag=2,
+    )

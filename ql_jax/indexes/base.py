@@ -80,3 +80,39 @@ class InterestRateIndex:
 
     def clear_fixings(self):
         self._fixings.clear()
+
+
+@dataclass
+class BmaIndex(InterestRateIndex):
+    """BMA (Bond Market Association / SIFMA Municipal Swap) index.
+
+    The BMA Municipal Swap Index is a weekly rate representing the
+    prevailing rate on tax-exempt variable-rate demand obligations.
+    It resets weekly on Wednesdays.
+    """
+
+    def __init__(self, calendar: Calendar = None):
+        if calendar is None:
+            calendar = WeekendsOnly()
+        super().__init__(
+            family_name="BMA",
+            tenor_months=0,
+            fixing_days=1,
+            currency_code="USD",
+            day_counter_convention="Actual360",
+            calendar=calendar,
+        )
+
+    def _forecast_fixing(self, date: Date, curve) -> float:
+        """Forecast BMA rate from a yield curve (pre-tax municipal curve)."""
+        vd = self.value_date(date)
+        # BMA is a weekly rate — maturity is 7 days
+        md = Date(vd.serial + 7)
+        t1 = curve.time_from_reference(vd)
+        t2 = curve.time_from_reference(md)
+        df1 = curve.discount(t1)
+        df2 = curve.discount(t2)
+        tau = float(t2 - t1)
+        if tau <= 0:
+            return 0.0
+        return float((df1 / df2 - 1.0) / tau)

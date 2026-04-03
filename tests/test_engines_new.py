@@ -147,7 +147,7 @@ class TestFDHeston:
         price = fd_heston_price(S=100.0, K=100.0, T=1.0, r=0.05, q=0.0,
                                v0=0.04, kappa=1.5, theta=0.04,
                                sigma_v=0.3, rho=-0.7, option_type=1,
-                               n_x=15, n_v=8, n_time=15)
+                               n_x=15, n_v=8, n_t=15)
         assert float(price) > 0.0
 
 

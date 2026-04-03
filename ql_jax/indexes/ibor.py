@@ -335,3 +335,42 @@ def Tonar() -> OvernightIndex:
 def Wibor(tenor_months: int = 3) -> IborIndex:
     """Warsaw Interbank Offered Rate."""
     return IborIndex(family_name="Wibor", tenor_months=tenor_months, fixing_days=2, currency_code="PLN", day_counter_convention="Actual365Fixed", calendar=WeekendsOnly())
+
+
+# ---------------------------------------------------------------------------
+# Additional IBOR indexes (additional_gaps Phase 1)
+# ---------------------------------------------------------------------------
+
+def Bibor(tenor_months: int = 3) -> IborIndex:
+    """Budapest Interbank Offered Rate (HUF)."""
+    return IborIndex(family_name="Bibor", tenor_months=tenor_months, fixing_days=2, currency_code="HUF", day_counter_convention="Actual360", calendar=WeekendsOnly())
+
+
+def BKBM(tenor_months: int = 3) -> IborIndex:
+    """New Zealand Bank Bill Reference Rate."""
+    return IborIndex(family_name="BKBM", tenor_months=tenor_months, fixing_days=0, currency_code="NZD", day_counter_convention="Actual365Fixed", calendar=WeekendsOnly())
+
+
+def Mosprime(tenor_months: int = 3) -> IborIndex:
+    """Moscow Prime Offered Rate (RUB)."""
+    return IborIndex(family_name="Mosprime", tenor_months=tenor_months, fixing_days=2, currency_code="RUB", day_counter_convention="Actual365Fixed", calendar=WeekendsOnly())
+
+
+def Robor(tenor_months: int = 3) -> IborIndex:
+    """Romanian Interbank Offered Rate (RON)."""
+    return IborIndex(family_name="Robor", tenor_months=tenor_months, fixing_days=2, currency_code="RON", day_counter_convention="Actual360", calendar=WeekendsOnly())
+
+
+def Thbfix(tenor_months: int = 3) -> IborIndex:
+    """Thai Baht Interest Rate Fixing."""
+    return IborIndex(family_name="Thbfix", tenor_months=tenor_months, fixing_days=2, currency_code="THB", day_counter_convention="Actual365Fixed", calendar=WeekendsOnly())
+
+
+def Trlibor(tenor_months: int = 3) -> IborIndex:
+    """Turkish Lira Interbank Offered Rate."""
+    return IborIndex(family_name="Trlibor", tenor_months=tenor_months, fixing_days=2, currency_code="TRY", day_counter_convention="Actual360", calendar=WeekendsOnly())
+
+
+def Zibor(tenor_months: int = 3) -> IborIndex:
+    """Zagreb Interbank Offered Rate (HRK/EUR)."""
+    return IborIndex(family_name="Zibor", tenor_months=tenor_months, fixing_days=2, currency_code="HRK", day_counter_convention="Actual360", calendar=WeekendsOnly())
