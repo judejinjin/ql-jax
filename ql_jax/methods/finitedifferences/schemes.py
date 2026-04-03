@@ -174,6 +174,47 @@ def trbdf2_step(V, dt, L, bc_fn=None, t=None, alpha=2.0 - jnp.sqrt(2.0)):
     return V_new
 
 
+def method_of_lines_step(V, dt, L, bc_fn=None, t=None, n_sub=4):
+    """Method of Lines: spatial FD + RK4 temporal integration.
+
+    Instead of an implicit tridiagonal solve, we use an explicit
+    4th-order Runge-Kutta step in time, which gives high accuracy
+    for smooth operators.  Stability requires dt < C*dx^2/diffusion.
+
+    Parameters
+    ----------
+    V : array – current solution
+    dt : float – time step
+    L : TridiagonalOperator – spatial operator  (dV/dt = L*V)
+    bc_fn : boundary conditions
+    t : current time
+    n_sub : number of sub-steps (for stability)
+
+    Returns
+    -------
+    V_new : array
+    """
+    h = dt / n_sub
+    for _ in range(n_sub):
+        k1 = L.apply(V)
+        V1 = V + 0.5 * h * k1
+        if bc_fn is not None:
+            V1 = bc_fn(V1, t)
+        k2 = L.apply(V1)
+        V2 = V + 0.5 * h * k2
+        if bc_fn is not None:
+            V2 = bc_fn(V2, t)
+        k3 = L.apply(V2)
+        V3 = V + h * k3
+        if bc_fn is not None:
+            V3 = bc_fn(V3, t)
+        k4 = L.apply(V3)
+        V = V + (h / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4)
+        if bc_fn is not None:
+            V = bc_fn(V, t)
+    return V
+
+
 def mixed_scheme_step(V, dt, L, bc_fn=None, t=None):
     """Mixed scheme: use explicit Euler when stable, implicit otherwise.
 

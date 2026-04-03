@@ -179,3 +179,164 @@ class Fdm2dBlackScholesOp:
                 result = result.at[i, j].add(cross * self.x_grid[i] * self.y_grid[j] * d2_cross)
 
         return result
+
+
+def fdm_cir_operator(x_grid, kappa, theta_cir, sigma, r_discount=None):
+    """CIR (Cox-Ingersoll-Ross) 1D FD operator.
+
+    dX = kappa*(theta - X)*dt + sigma*sqrt(X)*dW
+
+    Parameters
+    ----------
+    x_grid : 1D grid for the CIR variable (must be positive)
+    kappa : mean reversion speed
+    theta_cir : long-run mean
+    sigma : vol-of-vol
+    r_discount : discount rate (if None, uses the CIR variable itself)
+
+    Returns
+    -------
+    L : TridiagonalOperator
+    """
+    X = jnp.maximum(x_grid, 1e-10)
+    drift = kappa * (theta_cir - X)
+    diffusion = 0.5 * sigma**2 * X
+
+    D1 = d_zero(x_grid)
+    D2 = d_plus_d_minus(x_grid)
+
+    r = X if r_discount is None else r_discount
+    lower = diffusion[1:] * D2.lower + drift[1:] * D1.lower
+    diag = diffusion * D2.diag + drift * D1.diag - r
+    upper = diffusion[:-1] * D2.upper + drift[:-1] * D1.upper
+
+    return TridiagonalOperator(lower, diag, upper)
+
+
+def fdm_g2pp_operator(x_grid, y_grid, a, b, sigma_x, sigma_y, rho):
+    """G2++ two-factor short-rate FD operator.
+
+    dx = -a*x*dt + sigma_x*dW1
+    dy = -b*y*dt + sigma_y*dW2
+    dW1*dW2 = rho*dt
+    r(t) = phi(t) + x(t) + y(t)
+
+    Returns 1D operators for each factor plus the 2D composite.
+
+    Parameters
+    ----------
+    x_grid, y_grid : 1D grids for each factor
+    a, b : mean-reversion speeds
+    sigma_x, sigma_y : volatilities
+    rho : correlation
+
+    Returns
+    -------
+    Fdm2dBlackScholesOp with x-direction and y-direction operators
+    """
+    # x-direction: OU process
+    drift_x = -a * x_grid
+    diff_x = 0.5 * sigma_x**2
+    D1x = d_zero(x_grid)
+    D2x = d_plus_d_minus(x_grid)
+    lower_x = diff_x * D2x.lower + drift_x[1:] * D1x.lower
+    diag_x = diff_x * D2x.diag + drift_x * D1x.diag
+    upper_x = diff_x * D2x.upper + drift_x[:-1] * D1x.upper
+    Lx = TridiagonalOperator(lower_x, diag_x, upper_x)
+
+    # y-direction: OU process
+    drift_y = -b * y_grid
+    diff_y = 0.5 * sigma_y**2
+    D1y = d_zero(y_grid)
+    D2y = d_plus_d_minus(y_grid)
+    lower_y = diff_y * D2y.lower + drift_y[1:] * D1y.lower
+    diag_y = diff_y * D2y.diag + drift_y * D1y.diag
+    upper_y = diff_y * D2y.upper + drift_y[:-1] * D1y.upper
+    Ly = TridiagonalOperator(lower_y, diag_y, upper_y)
+
+    return Fdm2dBlackScholesOp(
+        Lx=Lx, Ly=Ly, rho=rho,
+        sigma_x=sigma_x, sigma_y=sigma_y,
+        x_grid=x_grid, y_grid=y_grid,
+    )
+
+
+def fdm_bs_forward_operator(x_grid, r, q, sigma):
+    """Black-Scholes forward (Fokker-Planck) operator.
+
+    The forward PDE is the adjoint of the backward BS PDE,
+    used for density/probability evolution:
+
+    dp/dt = -d/dx[(r-q-0.5*sigma^2)*p] + 0.5*sigma^2 * d^2p/dx^2
+
+    with x = log(S).
+
+    Parameters
+    ----------
+    x_grid : log-spot grid
+    r, q : rates
+    sigma : volatility
+
+    Returns
+    -------
+    L : TridiagonalOperator (forward operator)
+    """
+    nu = r - q - 0.5 * sigma**2
+    diff = 0.5 * sigma**2
+
+    D1 = d_zero(x_grid)
+    D2 = d_plus_d_minus(x_grid)
+
+    # Forward (adjoint): sign flip on drift term
+    lower = diff * D2.lower - nu * D1.lower
+    diag = diff * D2.diag - nu * D1.diag
+    upper = diff * D2.upper - nu * D1.upper
+
+    return TridiagonalOperator(lower, diag, upper)
+
+
+def fdm_heston_forward_operator(x_grid, v_grid, r, q, kappa, theta, xi, rho):
+    """Heston forward (Fokker-Planck) operator for density evolution.
+
+    Forward PDE for the joint (log-S, v) density.
+
+    Returns per-dimension operators for use in ADI schemes.
+
+    Parameters
+    ----------
+    x_grid : log-spot grid
+    v_grid : variance grid
+    r, q : rates
+    kappa, theta, xi, rho : Heston parameters
+
+    Returns
+    -------
+    (Lx, Lv) : tuple of 1D forward operators
+    """
+    # x-direction forward operator
+    nu = r - q - 0.5  # * v applied pointwise
+    D1x = d_zero(x_grid)
+    D2x = d_plus_d_minus(x_grid)
+    # Average variance for the 1D slice
+    v_mid = jnp.mean(v_grid)
+    diff_x = 0.5 * v_mid
+    drift_x = -(r - q - 0.5 * v_mid)  # negated for forward
+
+    lower_x = diff_x * D2x.lower + drift_x * D1x.lower
+    diag_x = diff_x * D2x.diag + drift_x * D1x.diag
+    upper_x = diff_x * D2x.upper + drift_x * D1x.upper
+    Lx = TridiagonalOperator(lower_x, diag_x, upper_x)
+
+    # v-direction forward operator
+    D1v = d_zero(v_grid)
+    D2v = d_plus_d_minus(v_grid)
+    v_safe = jnp.maximum(v_grid, 1e-10)
+    diff_v = 0.5 * xi**2 * v_safe
+    drift_v = -(kappa * (theta - v_grid))  # negated for forward
+
+    lower_v = diff_v[1:] * D2v.lower + drift_v[1:] * D1v.lower
+    diag_v = diff_v * D2v.diag + drift_v * D1v.diag
+    upper_v = diff_v[:-1] * D2v.upper + drift_v[:-1] * D1v.upper
+    Lv = TridiagonalOperator(lower_v, diag_v, upper_v)
+
+    return Lx, Lv

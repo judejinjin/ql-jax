@@ -276,3 +276,65 @@ class ExponentialJump1dMesher:
 
     def dplus(self):
         return self.dminus()
+
+
+@dataclass(frozen=True)
+class FdmCEV1dMesher:
+    """1D mesher for the CEV process dS = (r-q)*S*dt + sigma*S^beta*dW.
+
+    Concentrates grid points near the origin (where S^beta behaviour
+    changes) and near the spot.
+    """
+    low: float
+    high: float
+    size: int
+    spot: float = 100.0
+    sigma: float = 0.2
+    beta: float = 0.5
+
+    def locations(self):
+        u = jnp.linspace(0.0, 1.0, self.size)
+        exponent = max(1.0 / (2.0 - 2.0 * self.beta + 0.01), 1.0)
+        s = u ** exponent
+        return self.low + (self.high - self.low) * s
+
+    def dminus(self):
+        return jnp.diff(self.locations())
+
+    def dplus(self):
+        return self.dminus()
+
+
+@dataclass(frozen=True)
+class FdmBlackScholesMultiStrikeMesher:
+    """1D mesher for BS that concentrates around multiple strike levels.
+
+    Useful for basket / rainbow options with multiple payoff boundaries.
+    """
+    low: float
+    high: float
+    size: int
+    strikes: tuple = ()
+    density: float = 5.0
+
+    def locations(self):
+        if not self.strikes:
+            return jnp.linspace(self.low, self.high, self.size)
+
+        u = jnp.linspace(0.0, 1.0, self.size)
+        rng = self.high - self.low
+        x = self.low + rng * u
+
+        for K in self.strikes:
+            c = (K - self.low) / rng
+            shift = self.density * (u - c)
+            mapped = c + jnp.arcsinh(shift) / (2.0 * self.density)
+            x = 0.5 * x + 0.5 * (self.low + rng * jnp.clip(mapped, 0.0, 1.0))
+
+        return jnp.sort(x)
+
+    def dminus(self):
+        return jnp.diff(self.locations())
+
+    def dplus(self):
+        return self.dminus()

@@ -372,3 +372,140 @@ def make_cpi_bond(
     bond.base_cpi = base_cpi  # type: ignore[attr-defined]
     bond.is_inflation_linked = True  # type: ignore[attr-defined]
     return bond
+
+
+# ---------------------------------------------------------------------------
+# CMS-rate bond
+# ---------------------------------------------------------------------------
+
+def make_cms_rate_bond(
+    settlement_days: int,
+    face_amount: float,
+    schedule: Schedule,
+    swap_tenor: float,
+    day_counter: str = "Actual/360",
+    payment_convention: int = BusinessDayConvention.Following,
+    fixing_days: int = 2,
+    gearing: float = 1.0,
+    spread: float = 0.0,
+    cap: float | None = None,
+    floor: float | None = None,
+    redemption: float = 100.0,
+    issue_date: Date | None = None,
+    calendar: Calendar | None = None,
+) -> Bond:
+    """Create a CMS-rate linked bond.
+
+    Each coupon pays gearing * SwapRate(tenor) + spread,
+    optionally capped/floored.
+    """
+    from ql_jax.cashflows.cms import CMSCoupon
+    from ql_jax.time.daycounter import year_fraction
+
+    cal = calendar or schedule.calendar
+    legs = []
+    for i in range(len(schedule) - 1):
+        start = schedule[i]
+        end = schedule[i + 1]
+        pay_date = cal.adjust(end, payment_convention) if cal else end
+        accrual = year_fraction(start, end, day_counter)
+        fixing_time = year_fraction(schedule[0], start, "Actual/365 (Fixed)")
+        payment_time = year_fraction(schedule[0], pay_date, "Actual/365 (Fixed)")
+        legs.append(CMSCoupon(
+            notional=face_amount,
+            fixing_date=fixing_time,
+            payment_date=payment_time,
+            accrual_period=accrual,
+            swap_tenor=swap_tenor,
+            gearing=gearing,
+            spread=spread,
+        ))
+
+    redemption_date = schedule[-1]
+    if cal is not None:
+        redemption_date = cal.adjust(redemption_date, payment_convention)
+    reds = [Redemption(date=redemption_date, amount=redemption)]
+
+    bond = Bond(
+        settlement_days=settlement_days,
+        calendar=cal,
+        issue_date=issue_date,
+        cashflows_=legs,
+        redemptions_=reds,
+        notional_=face_amount,
+    )
+    bond.is_cms_linked = True  # type: ignore[attr-defined]
+    if cap is not None:
+        bond.cms_cap = cap  # type: ignore[attr-defined]
+    if floor is not None:
+        bond.cms_floor = floor  # type: ignore[attr-defined]
+    return bond
+
+
+# ---------------------------------------------------------------------------
+# Amortizing CMS-rate bond
+# ---------------------------------------------------------------------------
+
+def make_amortizing_cms_rate_bond(
+    settlement_days: int,
+    calendar: Calendar,
+    face_amount: float,
+    start_date: Date,
+    tenor: Period,
+    frequency: int,
+    swap_tenor: float,
+    day_counter: str = "Actual/360",
+    spread: float = 0.0,
+    payment_convention: int = BusinessDayConvention.Following,
+    issue_date: Date | None = None,
+) -> Bond:
+    """Create an amortizing CMS-rate bond with straight-line amortization."""
+    from ql_jax.cashflows.cms import CMSCoupon
+    from ql_jax.time.daycounter import year_fraction
+
+    sched = (MakeSchedule()
+             .from_date(start_date)
+             .to_date(start_date + tenor)
+             .with_frequency(frequency)
+             .with_calendar(calendar)
+             .with_convention(payment_convention)
+             .build())
+
+    n = len(sched) - 1
+    if n <= 0:
+        return Bond(settlement_days=settlement_days, calendar=calendar)
+
+    principal_per_period = face_amount / n
+    balance = face_amount
+
+    legs = []
+    redemptions = []
+    for i in range(n):
+        start = sched[i]
+        end = sched[i + 1]
+        pay_date = calendar.adjust(end, payment_convention)
+        accrual = year_fraction(start, end, day_counter)
+        fixing_time = year_fraction(sched[0], start, "Actual/365 (Fixed)")
+        payment_time = year_fraction(sched[0], pay_date, "Actual/365 (Fixed)")
+        legs.append(CMSCoupon(
+            notional=balance,
+            fixing_date=fixing_time,
+            payment_date=payment_time,
+            accrual_period=accrual,
+            swap_tenor=swap_tenor,
+            spread=spread,
+        ))
+        repay = min(principal_per_period, balance)
+        redemptions.append(Redemption(date=pay_date, amount=repay))
+        balance -= repay
+
+    bond = Bond(
+        settlement_days=settlement_days,
+        calendar=calendar,
+        issue_date=issue_date,
+        cashflows_=legs,
+        redemptions_=redemptions,
+        notional_=face_amount,
+    )
+    bond.is_cms_linked = True  # type: ignore[attr-defined]
+    return bond
