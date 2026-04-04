@@ -24,7 +24,7 @@ jobs:
 
       - name: Run benchmarks
         run: |
-          .venv/bin/python benchmarks/runner.py --backend cpu --size medium --output benchmarks/results/latest.json
+          .venv/bin/python benchmarks/runner.py --backend auto --size medium --output benchmarks/results/latest.json
 
       - name: Upload results
         uses: actions/upload-artifact@v4
