@@ -67,7 +67,7 @@ def _protection_leg(cds, discount_fn, survival_fn):
     total = 0.0
     t_prev = 0.0
     for i in range(n):
-        t_curr = float(dates[i])
+        t_curr = dates[i]
         t_mid = 0.5 * (t_prev + t_curr)
 
         P_mid = discount_fn(t_mid)
@@ -98,7 +98,7 @@ def _risky_annuity(cds, discount_fn, survival_fn):
     annuity = 0.0
     t_prev = 0.0
     for i in range(n):
-        t_curr = float(dates[i])
+        t_curr = dates[i]
         tau = dt
 
         # Survival at payment date

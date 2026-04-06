@@ -84,4 +84,4 @@ def fd_swing_price(
     idx = jnp.clip(idx, 1, n_x - 1)
     w = (jnp.log(S0) - x[idx - 1]) / dx
     price = V[n_exercises, idx - 1] * (1 - w) + V[n_exercises, idx] * w
-    return float(price)
+    return price

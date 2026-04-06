@@ -26,7 +26,7 @@ class IborIndex(InterestRateIndex):
         t2 = curve.time_from_reference(md)
         df1 = curve.discount(t1)
         df2 = curve.discount(t2)
-        tau = float(t2 - t1)
+        tau = year_fraction(vd, md, self.day_counter_convention)
         if tau <= 0:
             return 0.0
         return float((df1 / df2 - 1.0) / tau)

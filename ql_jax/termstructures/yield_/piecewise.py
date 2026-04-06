@@ -75,10 +75,10 @@ class PiecewiseYieldCurve(YieldTermStructure):
             try:
                 log_df = brent_solve(
                     objective,
+                    self._accuracy,
                     log_df_guess,
                     log_df_guess - 2.0,
                     log_df_guess + 2.0,
-                    self._accuracy,
                 )
             except Exception:
                 log_df = log_df_guess

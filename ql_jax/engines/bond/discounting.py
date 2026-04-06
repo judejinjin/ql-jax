@@ -169,3 +169,152 @@ class BondFunctions:
                 break
             z = z - f / fp
         return float(z)
+
+
+# ---------------------------------------------------------------------------
+# Bond forward (repo) pricing
+# ---------------------------------------------------------------------------
+
+def bond_forward_spot_income(
+    bond,
+    settlement_date,
+    delivery_date,
+    income_discount_curve,
+) -> float:
+    """PV of bond coupons falling between settlement and delivery.
+
+    Parameters
+    ----------
+    bond : Bond
+    settlement_date : Date
+    delivery_date : Date
+    income_discount_curve : YieldTermStructure
+
+    Returns
+    -------
+    float : present value of intermediate coupon income
+    """
+    from ql_jax.cashflows.analytics import _cf_amount, _cf_date
+
+    income = 0.0
+    for cf in bond.cashflows:
+        d = _cf_date(cf)
+        if d <= settlement_date:
+            continue
+        if d > delivery_date:
+            continue
+        amount = _cf_amount(cf)
+        t = income_discount_curve.time_from_reference(d)
+        df = income_discount_curve.discount(t)
+        income = income + amount * df
+    return income
+
+
+def bond_forward_dirty_price(
+    bond,
+    delivery_date,
+    discount_curve,
+    income_discount_curve=None,
+    bond_curve=None,
+    settlement_date=None,
+) -> float:
+    """Dirty forward price of a bond for delivery at a future date.
+
+    P_DirtyFwd = (P_DirtySpot - SpotIncome) / DF(delivery)
+
+    Parameters
+    ----------
+    bond : Bond
+    delivery_date : Date
+    discount_curve : YieldTermStructure  (repo curve — used for delivery DF)
+    income_discount_curve : YieldTermStructure or None
+        Curve for discounting intermediate coupons. Defaults to discount_curve.
+    bond_curve : YieldTermStructure or None
+        Curve for pricing the underlying bond spot. Defaults to discount_curve.
+    settlement_date : Date or None
+
+    Returns
+    -------
+    float : dirty forward price (dollar amount, not percentage)
+    """
+    settle = settlement_date or discount_curve.reference_date
+    inc_curve = income_discount_curve or discount_curve
+    b_curve = bond_curve or discount_curve
+
+    dirty_spot = discounting_bond_npv(bond, b_curve, settle)
+    spot_income = bond_forward_spot_income(bond, settle, delivery_date, inc_curve)
+
+    t_delivery = discount_curve.time_from_reference(delivery_date)
+    df_delivery = discount_curve.discount(t_delivery)
+
+    return (dirty_spot - spot_income) / df_delivery
+
+
+def bond_forward_clean_price(
+    bond,
+    delivery_date,
+    discount_curve,
+    income_discount_curve=None,
+    bond_curve=None,
+    settlement_date=None,
+) -> float:
+    """Clean forward price = dirty forward price - accrued at delivery.
+
+    Parameters
+    ----------
+    bond : Bond
+    delivery_date : Date
+    discount_curve : YieldTermStructure (repo curve)
+    income_discount_curve : YieldTermStructure or None
+    bond_curve : YieldTermStructure or None
+    settlement_date : Date or None
+
+    Returns
+    -------
+    float : clean forward price (dollar amount)
+    """
+    dirty_fwd = bond_forward_dirty_price(
+        bond, delivery_date, discount_curve, income_discount_curve,
+        bond_curve, settlement_date,
+    )
+    ai_at_delivery = cf_accrued(bond.cashflows, delivery_date)
+    return dirty_fwd - ai_at_delivery
+
+
+def bond_forward_npv(
+    bond,
+    delivery_date,
+    strike,
+    discount_curve,
+    income_discount_curve=None,
+    bond_curve=None,
+    settlement_date=None,
+    position: int = 1,
+) -> float:
+    """NPV of a bond forward contract.
+
+    NPV = position * (DirtyForwardPrice - Strike) * DF(delivery)
+
+    Parameters
+    ----------
+    bond : Bond
+    delivery_date : Date
+    strike : float  (dirty forward price agreed at inception)
+    discount_curve : YieldTermStructure
+    income_discount_curve : YieldTermStructure or None
+    bond_curve : YieldTermStructure or None
+    settlement_date : Date or None
+    position : +1 for long, -1 for short
+
+    Returns
+    -------
+    float : NPV of the forward contract
+    """
+    dirty_fwd = bond_forward_dirty_price(
+        bond, delivery_date, discount_curve, income_discount_curve,
+        bond_curve, settlement_date,
+    )
+    t_delivery = discount_curve.time_from_reference(delivery_date)
+    df_delivery = discount_curve.discount(t_delivery)
+
+    return position * (dirty_fwd - strike) * df_delivery
