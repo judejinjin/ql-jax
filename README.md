@@ -130,7 +130,7 @@ make bench         # Run benchmarks
 ## Running Tests
 
 ```bash
-# All tests
+# All tests (CPU)
 python -m pytest tests/ -v
 
 # Specific module
@@ -139,6 +139,20 @@ python -m pytest tests/test_equity.py -v
 # Integration tests
 python -m pytest tests/integration/ -v
 ```
+
+### Running Tests on GPU
+
+```bash
+JAX_PLATFORMS=cuda python -m pytest tests/ -v
+```
+
+| Flag | Purpose |
+|------|---------|
+| `JAX_PLATFORMS=cuda` | Tells JAX to use the CUDA (NVIDIA GPU) backend instead of the default CPU. All array operations and JIT-compiled functions run on the GPU. No code changes are needed — JAX dispatches transparently. |
+
+**Requirements**: `pip install -e ".[gpu]"` (installs `jax[cuda12]` with NVIDIA CUDA 12 runtime libraries).
+
+**Note**: The first run is slower because XLA must JIT-compile every kernel for the GPU target. Subsequent runs with cached compilations are faster.
 
 ## Examples
 
